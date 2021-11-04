@@ -1,0 +1,40 @@
+package org.owasp.webgoat.missing_ac;
+
+import org.owasp.webgoat.LessonDataSource;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Component
+public class MissingAccessControlUserRepository {
+
+    private final NamedParameterJdbcTemplate jdbcTemplate;
+    private final RowMapper<User> mapper = (rs, rowNum) -> new User(rs.getString("username"), rs.getString("password"), rs.getBoolean("admin"));
+
+    public MissingAccessControlUserRepository(LessonDataSource lessonDataSource) {
+        this.jdbcTemplate = new NamedParameterJdbcTemplate(lessonDataSource);
+    }
+
+    public List<User> findAllUsers() {
+        return jdbcTemplate.query("select username, password, admin from access_control_users", mapper);
+    }
+
+    public User findByUsername(String username) {
+        return jdbcTemplate.queryForObject("select username, password, admin from access_control_users where username=:username",
+                new MapSqlParameterSource().addValue("username", username),
+                mapper);
+    }
+
+    public User save(User user) {
+        jdbcTemplate.update("INSERT INTO access_control_users(username, password, admin) VALUES(:username,:password,:admin)",
+                new MapSqlParameterSource()
+                        .addValue("username", user.getUsername())
+                        .addValue("password", user.getPassword())
+                        .addValue("admin", user.isAdmin()));
+        return user;
+    }
+
+}
